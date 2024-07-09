@@ -99,12 +99,7 @@ public class MavenVisitor<P> extends XmlVisitor<P> {
      */
     public boolean isDependencyTag(String groupId, String artifactId) {
         if (!isDependencyTag()) {
-            if (isTag("dependency") && PROFILE_DEPENDENCY_MATCHER.matches(getCursor())) {
-                Xml.Tag tag = getCursor().getValue();
-                return matchesGlob(tag.getChildValue("groupId").orElse(null), groupId) &&
-                       matchesGlob(tag.getChildValue("artifactId").orElse(null), artifactId);
-            }
-            return false;
+            return isProfileDependencyTag(groupId, artifactId);
         }
         Xml.Tag tag = getCursor().getValue();
         Map<Scope, List<ResolvedDependency>> dependencies = getResolutionResult().getDependencies();
@@ -163,12 +158,7 @@ public class MavenVisitor<P> extends XmlVisitor<P> {
      */
     public boolean isManagedDependencyTag(String groupId, String artifactId) {
         if (!isManagedDependencyTag()) {
-            if (isTag("dependency") && PROFILE_MANAGED_DEPENDENCY_MATCHER.matches(getCursor())) {
-                Xml.Tag tag = getCursor().getValue();
-                return matchesGlob(tag.getChildValue("groupId").orElse(null), groupId) &&
-                       matchesGlob(tag.getChildValue("artifactId").orElse(null), artifactId);
-            }
-            return false;
+            return isProfileDependencyTag(groupId, artifactId);
         }
         Xml.Tag tag = getCursor().getValue();
         for (ResolvedManagedDependency dm : getResolutionResult().getPom().getDependencyManagement()) {
@@ -203,6 +193,21 @@ public class MavenVisitor<P> extends XmlVisitor<P> {
         return tag.getChildValue("type").map("pom"::equalsIgnoreCase).orElse(false)
                && tag.getChildValue("scope").map("import"::equalsIgnoreCase).orElse(false);
     }
+
+    public boolean isProfileDependencyTag() {
+        return isTag("dependency") && (PROFILE_DEPENDENCY_MATCHER.matches(getCursor()) || PROFILE_PLUGIN_DEPENDENCY_MATCHER.matches(getCursor()) || PROFILE_MANAGED_DEPENDENCY_MATCHER.matches(getCursor()));
+    }
+
+    public boolean isProfileDependencyTag(String groupId, String artifactId) {
+        if (!isProfileDependencyTag()) {
+            return false;
+        }
+        Xml.Tag tag = getCursor().getValue();
+        return matchesGlob(tag.getChildValue("groupId").orElse(null), groupId) &&
+                matchesGlob(tag.getChildValue("artifactId").orElse(null), artifactId);
+    }
+
+
 
     public void maybeUpdateModel() {
         for (TreeVisitor<?, P> afterVisit : getAfterVisit()) {
